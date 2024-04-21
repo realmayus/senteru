@@ -1,16 +1,16 @@
 mod server;
 
 use axum::http::HeaderValue;
-use axum::response::IntoResponse;
+
 use axum::routing::get;
 use axum::Router;
 use bincode::{Decode, Encode};
 use osmpbfreader::{Node, NodeId, OsmId, OsmPbfReader, Relation, RelationId, Way, WayId};
+use server::Db;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
-use server::Db;
 
 #[derive(Decode, Encode)]
 struct MapData {
@@ -26,7 +26,8 @@ struct MapData {
 async fn main() {
     let import_arg_present = std::env::args().any(|arg| arg == "--import");
     let mut data = if import_arg_present {
-        let (include_nodes, include_ways, relations) = import(PathBuf::from("assets/Tokyo.osm.pbf"));
+        let (include_nodes, include_ways, relations) =
+            import(PathBuf::from("assets/Tokyo.osm.pbf"));
 
         let data = MapData {
             nodes: include_nodes,
@@ -77,8 +78,7 @@ async fn main() {
                 let rel = data.relations.get(id).unwrap();
                 let other_rel = data.relations.get(other_id).unwrap();
                 if same_route(
-                    &rel
-                        .refs
+                    &rel.refs
                         .iter()
                         .filter_map(|rf| match rf.member {
                             OsmId::Node(node_id) => Some(node_id),
@@ -103,27 +103,51 @@ async fn main() {
     }
     let demote_keywords = ["bypass"];
     for (dupe_a, dupe_b) in to_remove {
-        let original_id = if demote_keywords.iter().any(|&k| data.relations[&dupe_a].tags.get("name:en").is_some_and(|v| v.to_lowercase().contains(k))) {
+        let original_id = if demote_keywords.iter().any(|&k| {
+            data.relations[&dupe_a]
+                .tags
+                .get("name:en")
+                .is_some_and(|v| v.to_lowercase().contains(k))
+        }) {
             dupe_b
         } else {
             dupe_a
         };
-        let del_id = if original_id == dupe_a { dupe_b } else { dupe_a };
+        let del_id = if original_id == dupe_a {
+            dupe_b
+        } else {
+            dupe_a
+        };
         let deld = data.relations.remove(&del_id);
-        println!("Removing line {:?} as it's a duplicate of {:?}",
-            deld.as_ref().map(|x| x.tags.get("name:en").or_else(|| data.relations[&del_id].tags.get("name"))),
-                 data.relations.get(&original_id).map(|x| x.tags.get("name:en").or_else(|| data.relations[&original_id].tags.get("name"))));
+        println!(
+            "Removing line {:?} as it's a duplicate of {:?}",
+            deld.as_ref().map(|x| x
+                .tags
+                .get("name:en")
+                .or_else(|| data.relations[&del_id].tags.get("name"))),
+            data.relations.get(&original_id).map(|x| x
+                .tags
+                .get("name:en")
+                .or_else(|| data.relations[&original_id].tags.get("name")))
+        );
     }
     let exclude_keywords = ["bypass"];
     data.relations.retain(|_, rel| {
-        if exclude_keywords.iter().any(|&k| rel.tags.get("name:en").is_some_and(|v| v.to_lowercase().contains(k))) {
-            println!("Excluding line {:?} because of exclusion keyword", rel.tags.get("name:en").or_else(|| rel.tags.get("name")));
+        if exclude_keywords.iter().any(|&k| {
+            rel.tags
+                .get("name:en")
+                .is_some_and(|v| v.to_lowercase().contains(k))
+        }) {
+            println!(
+                "Excluding line {:?} because of exclusion keyword",
+                rel.tags.get("name:en").or_else(|| rel.tags.get("name"))
+            );
             false
         } else {
             true
         }
     });
-    
+
     println!("Number of remaining lines: {:?}", data.relations.len());
 
     let cors = CorsLayer::new()
@@ -145,7 +169,13 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-fn import(path: PathBuf) -> (BTreeMap<NodeId, Node>, BTreeMap<WayId, Way>, BTreeMap<RelationId, Relation>) {
+fn import(
+    path: PathBuf,
+) -> (
+    BTreeMap<NodeId, Node>,
+    BTreeMap<WayId, Way>,
+    BTreeMap<RelationId, Relation>,
+) {
     let file = std::fs::File::open(path).unwrap();
     let mut reader = OsmPbfReader::new(file);
     let mut nodes = BTreeMap::new();

@@ -13,16 +13,12 @@
 		// 	attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 		// }).addTo(map);
 
-		L.tileLayer(
-			'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-			{
-				attribution: `&copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>,
+		L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+			attribution: `&copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>,
 	        &copy;<a href="https://carto.com/attributions" target="_blank">CARTO</a>`,
-				subdomains: 'abcd',
-				maxZoom: 14
-			}
-		).addTo(map);
-
+			subdomains: 'abcd',
+			maxZoom: 14
+		}).addTo(map);
 
 		return {
 			destroy: () => {
@@ -46,7 +42,7 @@
 			id: number;
 			name: string;
 			lat: number; // latitude in decimicro degrees
-			lon: number
+			lon: number;
 		}[];
 	}[] = [];
 
@@ -68,23 +64,22 @@
 	}
 
 	function removeLine(lineId: number) {
-		lineData = lineData.filter(l => l.relation.id !== lineId);
-		selection = selection.filter(id => id !== lineId);
+		lineData = lineData.filter((l) => l.relation.id !== lineId);
+		selection = selection.filter((id) => id !== lineId);
 		selection = selection;
 		lineData = lineData;
 	}
 
-
 	let points: Circle[] = [];
 	let polylines: Polyline[] = [];
 	$: {
-		points.forEach(p => p.remove());
+		points.forEach((p) => p.remove());
 		points = [];
-		polylines.forEach(p => p.remove());
+		polylines.forEach((p) => p.remove());
 		polylines = [];
 
 		for (const line of lineData) {
-			let waypoints: LatLngTuple[] = line.nodes.map(n => [n.lat / 10000000, n.lon / 10000000]);
+			let waypoints: LatLngTuple[] = line.nodes.map((n) => [n.lat / 10000000, n.lon / 10000000]);
 			if (waypoints.length === 0) {
 				continue;
 			}
@@ -101,7 +96,6 @@
 				points.push(point);
 				waypoints.push([lat, lon]);
 			}
-
 		}
 	}
 
@@ -119,67 +113,70 @@
 		<div class="linelist">
 			{#each lineList as line}
 				<label>
-					<input type="checkbox" checked={selection.includes(line.id)}
-								 on:change={(e) => e.target.checked ? addLine(line.id) : removeLine(line.id) } value={line.id} />
+					<input
+						type="checkbox"
+						checked={selection.includes(line.id)}
+						on:change={(e) => (e.target.checked ? addLine(line.id) : removeLine(line.id))}
+						value={line.id}
+					/>
 					{line.name}
 				</label>
 			{/each}
-		<button on:click={getAllLines}>Update line directory</button>
+			<button on:click={getAllLines}>Update line directory</button>
 		</div>
 	</div>
 	<div class="map" use:mapAction style="height: 100vh"></div>
 </main>
 
 <style>
-		:global(body) {
-				margin: 0;
-				font-family: "Open Sans", sans-serif;
-		}
-    main {
-        display: flex;
-    }
+	:global(body) {
+		margin: 0;
+		font-family: 'Open Sans', sans-serif;
+	}
+	main {
+		display: flex;
+	}
 
-    .map {
-        flex: 1;
-        position: relative;
-    }
+	.map {
+		flex: 1;
+		position: relative;
+	}
 
-    .map :global(.marker-text) {
-        width: 100%;
-        text-align: center;
-        font-weight: 600;
-        background-color: #444;
-        color: #EEE;
-        border-radius: 0.5rem;
-    }
+	.map :global(.marker-text) {
+		width: 100%;
+		text-align: center;
+		font-weight: 600;
+		background-color: #444;
+		color: #eee;
+		border-radius: 0.5rem;
+	}
 
+	.linelist {
+		padding: 10px;
 
-    .linelist {
-        padding: 10px;
+		display: flex;
+		flex-direction: column;
+		width: 200px;
+		height: calc(100vh - 120px);
+		overflow-y: scroll;
+		overflow-x: scroll;
+	}
 
-        display: flex;
-        flex-direction: column;
-        width: 200px;
-				height: calc(100vh - 120px);
-        overflow-y: scroll;
-        overflow-x: scroll;
-    }
+	button {
+		padding: 10px 20px;
+		border: none;
+		border-radius: 5px;
+		background-color: #444;
+		color: white;
+		font-size: 12pt;
+		cursor: pointer;
+	}
 
-		button {
-				padding: 10px 20px;
-				border: none;
-				border-radius: 5px;
-				background-color: #444;
-				color: white;
-				font-size: 12pt;
-				cursor: pointer;
-		}
-
-		.logo {
-			display: flex;
-			align-items: center;
-			justify-content: center;
-				background-color: #438EFF;
-				color: #EEEEEE;
-		}
+	.logo {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: #438eff;
+		color: #eeeeee;
+	}
 </style>

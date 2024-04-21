@@ -1,10 +1,10 @@
+use crate::MapData;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use axum::Json;
 use osmpbfreader::{OsmId, RelationId};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use crate::MapData;
 
 pub type Db = Arc<RwLock<MapData>>;
 
