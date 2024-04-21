@@ -1,34 +1,8 @@
 <script lang="ts">
-	import 'leaflet/dist/leaflet.css';
-	import L, { Circle, type LatLngTuple, Map, Polyline } from 'leaflet';
 	import { onMount } from 'svelte';
 	import logo from '../assets/logo.svg';
 	import { unfryEyes } from '$lib';
-	let map: Map = null;
-
-	function mapAction(container: HTMLElement) {
-		map = L.map(container, { preferCanvas: true }).setView([35.6764, 139.65], 10);
-		// L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-		// 	maxZoom: 19,
-		// 	attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-		// }).addTo(map);
-
-		L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-			attribution: `&copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>,
-	        &copy;<a href="https://carto.com/attributions" target="_blank">CARTO</a>`,
-			subdomains: 'abcd',
-			maxZoom: 14
-		}).addTo(map);
-
-		return {
-			destroy: () => {
-				if (map) {
-					map.remove();
-					map = null;
-				}
-			}
-		};
-	}
+	import { CircleLayer, GeoJSON, LineLayer, MapLibre } from 'svelte-maplibre';
 
 	type LineRel = {
 		id: number;
@@ -70,35 +44,6 @@
 		lineData = lineData;
 	}
 
-	let points: Circle[] = [];
-	let polylines: Polyline[] = [];
-	$: {
-		points.forEach((p) => p.remove());
-		points = [];
-		polylines.forEach((p) => p.remove());
-		polylines = [];
-
-		for (const line of lineData) {
-			let waypoints: LatLngTuple[] = line.nodes.map((n) => [n.lat / 10000000, n.lon / 10000000]);
-			if (waypoints.length === 0) {
-				continue;
-			}
-			let color = unfryEyes(line.relation.color);
-			let polyline = L.polyline(waypoints, { color, weight: 10, stroke: true }).addTo(map);
-			polylines.push(polyline);
-			for (const node of line.nodes) {
-				let lat = node.lat / 10000000;
-				let lon = node.lon / 10000000;
-				let point = L.circle([lat, lon], {
-					color: 'white',
-					radius: 30
-				}).addTo(map);
-				points.push(point);
-				waypoints.push([lat, lon]);
-			}
-		}
-	}
-
 	onMount(async () => {
 		await getAllLines();
 	});
@@ -116,7 +61,7 @@
 					<input
 						type="checkbox"
 						checked={selection.includes(line.id)}
-						on:change={(e) => (e.target.checked ? addLine(line.id) : removeLine(line.id))}
+						on:change={(e) => (e.target?.checked ? addLine(line.id) : removeLine(line.id))}
 						value={line.id}
 					/>
 					{line.name}
@@ -125,7 +70,52 @@
 			<button on:click={getAllLines}>Update line directory</button>
 		</div>
 	</div>
-	<div class="map" use:mapAction style="height: 100vh"></div>
+	<MapLibre style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json" class="map" hash>
+		{#each lineData as line}
+			{@const color = unfryEyes(line.relation.color)}
+			<GeoJSON
+				id={line.relation.id.toString()}
+				data={{
+					type: 'Feature',
+					geometry: {
+						type: 'LineString',
+						coordinates: line.nodes.map((n) => [n.lon / 10000000, n.lat / 10000000])
+					},
+					properties: {}
+				}}
+			>
+				<LineLayer
+					layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+					paint={{
+						'line-width': 7,
+						'line-color': color,
+						'line-opacity': 0.8
+					}}
+				/>
+			</GeoJSON>
+			<GeoJSON
+				id={line.relation.id.toString() + 'nodes'}
+				data={{
+					type: 'FeatureCollection',
+					features: line.nodes.map((n) => ({
+						type: 'Feature',
+						geometry: {
+							type: 'Point',
+							coordinates: [n.lon / 10000000, n.lat / 10000000]
+						},
+						properties: {}
+					}))
+				}}
+			>
+				<CircleLayer
+					paint={{
+						'circle-radius': 3.5,
+						'circle-color': 'white'
+					}}
+				/>
+			</GeoJSON>
+		{/each}
+	</MapLibre>
 </main>
 
 <style>
@@ -137,18 +127,9 @@
 		display: flex;
 	}
 
-	.map {
-		flex: 1;
-		position: relative;
-	}
-
-	.map :global(.marker-text) {
-		width: 100%;
-		text-align: center;
-		font-weight: 600;
-		background-color: #444;
-		color: #eee;
-		border-radius: 0.5rem;
+	:global(.map) {
+		height: 100vh;
+		width: calc(100vw - 200px);
 	}
 
 	.linelist {

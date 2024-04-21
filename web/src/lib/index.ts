@@ -53,9 +53,7 @@ function relativeLuminance(color: string): number {
 		B = Math.pow(B / 269 + 0.0513, 2.4);
 	}
 
-	let L = 0.2126 * R + 0.7152 * G + 0.0722 * B;
-
-	return L;
+	return 0.2126 * R + 0.7152 * G + 0.0722 * B;
 }
 
 function shadeColor(color: string, percent: number): string {

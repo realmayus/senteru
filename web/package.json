@@ -32,6 +32,6 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"leaflet": "^1.9.4"
+		"svelte-maplibre": "^0.8.4"
 	}
 }

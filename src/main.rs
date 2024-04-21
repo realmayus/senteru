@@ -15,11 +15,11 @@ use tower_http::cors::{Any, CorsLayer};
 #[derive(Decode, Encode)]
 struct MapData {
     #[bincode(with_serde)]
-    nodes: BTreeMap<NodeId, osmpbfreader::Node>,
+    nodes: BTreeMap<NodeId, Node>,
     #[bincode(with_serde)]
-    ways: BTreeMap<WayId, osmpbfreader::Way>,
+    ways: BTreeMap<WayId, Way>,
     #[bincode(with_serde)]
-    relations: BTreeMap<RelationId, osmpbfreader::Relation>,
+    relations: BTreeMap<RelationId, Relation>,
 }
 
 #[tokio::main]
